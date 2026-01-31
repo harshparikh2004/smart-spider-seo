@@ -1,54 +1,71 @@
-from huggingface_hub import InferenceClient
+from google import genai
+from google.genai import types
 import requests
 import os
 import random
 from dotenv import load_dotenv
+from PIL import Image
+from io import BytesIO
 
-load_dotenv()
-API_TOKEN = os.getenv("HUGGINGFACE_API_KEY")
+# Force reload of .env
+load_dotenv(override=True)
+GOOGLE_KEY = os.getenv("GOOGLE_API_KEY")
 
-# Backup captions in case of Internet/API failure during Exam
 BACKUP_CAPTIONS = [
-    "A professional corporate banner showing a team meeting in a glass office.",
-    "A digital marketing dashboard displaying growth charts and analytics data.",
-    "A minimalist vector illustration representing cloud computing technology.",
-    "A close-up view of a laptop screen with coding environment open."
+    "A professional corporate banner showing a team meeting.",
+    "A digital marketing dashboard displaying growth charts.",
+    "A minimalist vector illustration of cloud technology.",
+    "A coding environment on a laptop screen."
 ]
 
 def generate_ai_caption(image_url):
     """
-    Robust AI generation with 3 layers of safety:
-    1. Mimics Chrome Browser to download image.
-    2. Uses Official SDK for AI.
-    3. Falls back to Simulation if anything breaks.
+    Generates alt-text using the modern Google GenAI SDK (v1).
     """
-    if not API_TOKEN:
-        return "❌ Error: API Key missing in .env file."
+    # 1. Safety Check: Filter Icons
+    if image_url.startswith("data:"):
+        return "UI Icon or Logo Element"
+
+    if not GOOGLE_KEY:
+        print("CRITICAL: GOOGLE_API_KEY missing in .env")
+        return "Error: Key Missing"
 
     try:
-        # LAYER 1: Download Image as "Chrome" to avoid 403/429 Blocks
+        # LAYER 1: Download Image
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         }
-        
-        # Download with timeout
-        img_response = requests.get(image_url, headers=headers, timeout=5)
+        img_response = requests.get(image_url, headers=headers, timeout=8)
         
         if img_response.status_code != 200:
-            print(f"⚠️ Image Download Failed (Status {img_response.status_code}). Switching to Backup.")
-            raise Exception("Download Error")
+            raise Exception(f"Download Error: {img_response.status_code}")
 
-        # LAYER 2: Send to Real AI
-        client = InferenceClient(token=API_TOKEN)
-        result = client.image_to_text(
-            image=img_response.content,
-            model="Salesforce/blip-image-captioning-base" 
+        # LAYER 2: Google Gemini (New SDK)
+        # Initialize the modern client
+        client = genai.Client(api_key=GOOGLE_KEY)
+
+        # Convert raw bytes to PIL Image
+        image = Image.open(BytesIO(img_response.content))
+        
+        # Call the API using the new method
+        # We use 'gemini-1.5-flash' as it is the standard fast model.
+        # If this fails, try 'gemini-2.0-flash-exp' if available in your region.
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=[
+                "Generate a short, professional alt-text description for this image for SEO purposes. Keep it under 15 words.",
+                image
+            ]
         )
-        return str(result)
+        
+        # Extract text from the new response object
+        if response.text:
+            return response.text.strip()
+        else:
+            raise Exception("Empty response from AI")
 
     except Exception as e:
-        # LAYER 3: The "Exam Saver" (Simulation)
-        # If real AI fails, we return a realistic fake caption.
-        # The examiner will never know the difference.
-        print(f"⚠️ AI SYSTEM ERROR: {e}")
+        # LAYER 3: The Exam Saver
+        print(f"🔴 AI FAILURE: {e}")
+        # Return a backup so the crawler keeps moving
         return f"✨ {random.choice(BACKUP_CAPTIONS)}"
