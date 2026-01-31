@@ -209,14 +209,14 @@ with st.sidebar:
     
     st.markdown("---")
     
-    target_url = st.text_input("ENTER TARGET URL", "https://emblus.com")
+    target_url = st.text_input("ENTER TARGET URL", "")
     
     c1, c2 = st.columns(2)
     with c1: st.toggle("Deep Scan", value=True)
     with c2: st.toggle("AI Vision", value=True)
 
     st.markdown("###")
-    run_btn = st.button("🚀 INITIALIZE AUDIT")
+    run_btn = st.button("INITIALIZE AUDIT")
     
     if run_btn and target_url:
         st.session_state.app_state = "results"
@@ -246,7 +246,7 @@ with st.sidebar:
 if st.session_state.app_state == "landing":
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown('<h1 class="hero-text">SEO AUDITS REIMAGINED</h1>', unsafe_allow_html=True)
-    st.markdown('<p class="hero-sub">AI-Powered Technical Analysis with Historical Tracking</p>', unsafe_allow_html=True)
+    st.markdown('<p class="hero-sub">AI-Powered Technical Analysis</p>', unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns(3)
     features = [
@@ -296,7 +296,7 @@ elif st.session_state.app_state == "results" and st.session_state.audit_data:
 
             # --- NEW: PDF DOWNLOAD BUTTON ---
             st.markdown("###") # Spacer
-            if st.button("📄 Generate PDF Report"):
+            if st.button("Generate PDF Report"):
                 with st.spinner("Compiling PDF..."):
                     pdf_bytes = report_gen.create_pdf(target_url, data, final_score)
                     st.download_button(
