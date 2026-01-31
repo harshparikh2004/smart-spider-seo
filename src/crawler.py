@@ -2,14 +2,16 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
 import time
+import random
+
+def get_random_header():
+    # Rotates headers to avoid detection
+    return {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+    }
 
 def crawl_url(url):
-    """
-    Crawls a single URL and extracts technical SEO data.
-    Returns a dictionary containing metrics and found elements.
-    """
-    
-    # 1. Input Validation
     if not url.startswith(('http://', 'https://')):
         url = 'https://' + url
 
@@ -21,63 +23,51 @@ def crawl_url(url):
         "meta_desc": "Missing",
         "h1": [],
         "h2": [],
-        "images": [],  # List of dicts: {'src': ..., 'alt': ...}
+        "images": [],
         "internal_links": 0,
         "external_links": 0,
         "error": None
     }
 
     try:
-        # 2. Performance Check (TTFB / Load Time)
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (compatible; SmartSpider/1.0; +http://your-portfolio.com)'
-        }
-        
         start_time = time.time()
-        response = requests.get(url, headers=headers, timeout=10)
+        # Use headers and a generous timeout
+        response = requests.get(url, headers=get_random_header(), timeout=10)
         end_time = time.time()
         
-        results["load_time"] = round(end_time - start_time, 4)
+        results["load_time"] = round(end_time - start_time, 2)
         results["status_code"] = response.status_code
 
-        # 3. If request is successful, parse HTML
         if response.status_code == 200:
             soup = BeautifulSoup(response.text, 'html.parser')
             
-            # Extract Title
-            if soup.title and soup.title.string:
-                results["title"] = soup.title.string.strip()
+            if soup.title: results["title"] = soup.title.string.strip()
             
-            # Extract Meta Description
             meta = soup.find('meta', attrs={'name': 'description'})
-            if meta and meta.get('content'):
-                results["meta_desc"] = meta['content'].strip()
+            if meta: results["meta_desc"] = meta.get('content', 'Missing').strip()
 
-            # Extract Headers
             results["h1"] = [h.get_text(strip=True) for h in soup.find_all('h1')]
-            results["h2"] = [h.get_text(strip=True) for h in soup.find_all('h2')]
+            results["h2"] = [h.get_text(strip=True) for h in soup.find_all('h2')][:5]
 
-            # Extract Images (Src & Alt)
-            imgs = soup.find_all('img')
-            for img in imgs:
+            # Get Images
+            for img in soup.find_all('img'):
                 src = img.get('src')
-                alt = img.get('alt', '').strip()
                 if src:
-                    # Handle relative URLs
-                    full_src = urljoin(url, src)
-                    results["images"].append({"src": full_src, "alt": alt})
+                    results["images"].append({
+                        "src": urljoin(url, src),
+                        "alt": img.get('alt', '').strip()
+                    })
 
             # Count Links
-            links = soup.find_all('a', href=True)
-            domain = urlparse(url).netloc
-            for link in links:
-                href = link['href']
-                if domain in href or href.startswith('/'):
+            for link in soup.find_all('a', href=True):
+                if urlparse(url).netloc in link['href']:
                     results["internal_links"] += 1
                 else:
                     results["external_links"] += 1
+        else:
+            results["error"] = f"Status {response.status_code}"
 
-    except requests.exceptions.RequestException as e:
-        results["error"] = f"Connection Error: {str(e)}"
+    except Exception as e:
+        results["error"] = str(e)
     
     return results
