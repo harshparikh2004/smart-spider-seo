@@ -72,6 +72,6 @@ streamlit run src/app.py
 ```
 # License & Credits
 
-Developed by: Harsh M. Parikh
-Project Type: Final Year Capstone | 2026
-License: MIT License
+Developed by: Harsh M. Parikh.
+Project Type: Final Year Capstone | 2026.
+License: MIT License.
