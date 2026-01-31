@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
-# Import our custom logic
 from crawler import crawl_url
+from utils import generate_ai_caption
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(
@@ -23,8 +23,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("Enter a website URL below to generate a real-time technical audit report.")
-
 # --- SIDEBAR ---
 with st.sidebar:
     st.header("Configuration")
@@ -34,11 +32,21 @@ with st.sidebar:
     st.divider()
     st.info("Built for Emblus Internship\nDeveloper: Harsh Parikh")
 
-# --- MAIN LOGIC ---
+# --- SESSION STATE MANAGEMENT (The Fix) ---
+# This keeps the data alive even when you click other buttons
+if "audit_data" not in st.session_state:
+    st.session_state.audit_data = None
+
+# Only run the crawler if the "Run Audit" button is clicked
 if run_btn and target_url:
     with st.spinner(f"Crawling {target_url}... Please wait."):
-        # Call our crawler script
-        data = crawl_url(target_url)
+        # Save result to session state
+        st.session_state.audit_data = crawl_url(target_url)
+
+# --- MAIN LOGIC ---
+# Now we check if data exists in session state, not just if the button was clicked
+if st.session_state.audit_data:
+    data = st.session_state.audit_data
 
     # Error Handling
     if data["error"]:
@@ -64,14 +72,12 @@ if run_btn and target_url:
             # Title Check
             if data["title"] != "Missing":
                 st.success(f"**Page Title:** {data['title']}")
-                st.caption(f"Length: {len(data['title'])} characters")
             else:
                 st.error("Page Title is Missing!")
 
             # Description Check
             if data["meta_desc"] != "Missing":
                 st.success(f"**Meta Description:** {data['meta_desc']}")
-                st.caption(f"Length: {len(data['meta_desc'])} characters")
             else:
                 st.warning("Meta Description is Missing!")
 
@@ -86,11 +92,8 @@ if run_btn and target_url:
         with tab2:
             st.subheader(f"Found {len(data['images'])} Images")
             
-            # Convert list of dicts to DataFrame for display
             if data["images"]:
                 df_img = pd.DataFrame(data["images"])
-                
-                # Filter for missing alt text
                 missing_alt = df_img[df_img['alt'] == '']
                 
                 c_a, c_b = st.columns(2)
@@ -99,7 +102,35 @@ if run_btn and target_url:
 
                 if not missing_alt.empty:
                     st.error(f"⚠️ {len(missing_alt)} images are missing Alt Text.")
-                    st.dataframe(missing_alt, use_container_width=True)
+                    
+                    st.markdown("### 🤖 AI Auto-Fixer")
+                    st.info("Select an image below to generate Alt-Text using Computer Vision.")
+                    
+                    # Create a dropdown to select a broken image
+                    img_option = st.selectbox(
+                        "Select Image to Fix:", 
+                        missing_alt['src'].tolist(),
+                        format_func=lambda x: x[:60] + "..." # Shorten long URLs
+                    )
+                    
+                    # Display selected image and Generate Button
+                    if img_option:
+                        col_left, col_right = st.columns([1, 2])
+                        with col_left:
+                            st.image(img_option, width=200, caption="Preview")
+                        
+                        with col_right:
+                            # Unique key is crucial here
+                            if st.button("✨ Generate AI Alt-Text", key="gen_btn"):
+                                with st.spinner("Analyzing pixels..."):
+                                    ai_text = generate_ai_caption(img_option)
+                                    
+                                    if "Error" in ai_text:
+                                        st.error(ai_text)
+                                    else:
+                                        st.success("✅ Suggested Alt-Text:")
+                                        st.code(ai_text, language="text")
+                                        st.caption("Copy this text and paste it into your CMS.")
                 else:
                     st.success("✅ All images have Alt Text!")
             else:
@@ -107,12 +138,13 @@ if run_btn and target_url:
 
         with tab3:
             st.subheader("Audit Findings")
-            # Logic to generate warnings dynamically
             if data["load_time"] > 2.0:
-                st.warning(f"🐢 **Slow Load Time:** The page took {data['load_time']}s to load. Google recommends under 2.5s.")
-            
+                st.warning(f"🐢 **Slow Load Time:** The page took {data['load_time']}s to load.")
             if len(data["h1"]) > 1:
-                st.warning("⚠️ **Multiple H1 Tags:** It is recommended to have only one H1 per page.")
-            
+                st.warning("⚠️ **Multiple H1 Tags:** Recommended to have only one H1.")
             if data["status_code"] != 200:
-                st.error("🚨 **Broken Page:** The server returned a non-200 status code.")
+                st.error("🚨 **Broken Page:** Server returned non-200 status.")
+
+else:
+    # Initial State
+    st.info("👈 Enter a URL in the sidebar and click 'Run Audit' to start.")
