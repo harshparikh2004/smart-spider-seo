@@ -2,6 +2,9 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import time
+import networkx as nx
+from pyvis.network import Network
+import streamlit.components.v1 as components
 
 # --- IMPORT YOUR MODULES ---
 from crawler import crawl_url
@@ -32,7 +35,7 @@ st.markdown("""
         background-color: #0B1121;
         border-right: 1px solid #1E293B;
     }
-    
+
     /* --- HERO TEXT --- */
     .hero-text {
         background: linear-gradient(to right, #3B82F6, #8B5CF6, #EC4899);
@@ -43,7 +46,6 @@ st.markdown("""
         text-align: center;
         margin-top: 2rem;
     }
-    
     .hero-sub {
         text-align: center;
         color: #94A3B8;
@@ -51,7 +53,7 @@ st.markdown("""
         margin-bottom: 3rem;
     }
 
-    /* --- METRIC CARDS (NEW) --- */
+    /* --- GLASS METRICS --- */
     .glass-metric {
         background: rgba(15, 23, 42, 0.6);
         border: 1px solid rgba(148, 163, 184, 0.1);
@@ -98,23 +100,18 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- 3. HELPER FUNCTIONS ---
+
 def create_donut_chart(score):
-    """
-    Creates a modern 'Donut' style chart instead of the old Gauge.
-    Removes the 'annoying bar' background artifacts.
-    """
     color = "#10B981" if score > 80 else "#F59E0B" if score > 50 else "#EF4444"
-    
     fig = go.Figure(go.Pie(
         values=[score, 100-score],
         labels=["Score", "Remaining"],
         hole=0.75,
         sort=False,
-        marker=dict(colors=[color, "#1E293B"]), # #1E293B matches the dark theme background
+        marker=dict(colors=[color, "#1E293B"]),
         textinfo='none',
         hoverinfo='none'
     ))
-
     fig.update_layout(
         showlegend=False,
         paper_bgcolor='rgba(0,0,0,0)',
@@ -125,15 +122,72 @@ def create_donut_chart(score):
     )
     return fig
 
+def generate_knowledge_graph(root_url, links):
+    """
+    Generates a 3D Physics-based Knowledge Graph of the website structure.
+    """
+    # Create NetworkX Graph
+    G = nx.DiGraph()
+    
+    # Add Root Node (The Website)
+    root_label = root_url.split('//')[-1].split('/')[0] # Extract domain name
+    G.add_node(root_label, label=root_label, color="#EC4899", title="Target Root", size=25)
+    
+    # Add Child Nodes (The Links)
+    for link in links:
+        # Extract last part of URL for clean label (e.g., /about-us -> about-us)
+        path = link.split('/')[-1]
+        if not path: path = link.split('/')[-2] if len(link.split('/')) > 1 else "Page"
+        
+        # Limit label length
+        label = (path[:15] + '..') if len(path) > 15 else path
+        
+        G.add_node(link, label=label, color="#3B82F6", title=link, size=15)
+        G.add_edge(root_label, link, color="rgba(148, 163, 184, 0.2)")
+
+    # Visualize with PyVis
+    net = Network(height="450px", width="100%", bgcolor="#0F172A", font_color="white")
+    net.from_nx(G)
+    
+    # Physics Settings for that "Floating Web" look
+    net.set_options("""
+    var options = {
+      "nodes": {
+        "font": { "size": 14, "face": "Plus Jakarta Sans" },
+        "borderWidth": 2
+      },
+      "edges": {
+        "color": { "inherit": true },
+        "smooth": false
+      },
+      "physics": {
+        "forceAtlas2Based": { "gravitationalConstant": -50, "centralGravity": 0.01, "springLength": 100, "springConstant": 0.08 },
+        "maxVelocity": 50,
+        "solver": "forceAtlas2Based",
+        "timestep": 0.35,
+        "stabilization": { "enabled": true }
+      }
+    }
+    """)
+    
+    # Save to temp HTML and read back
+    try:
+        net.save_graph("graph.html")
+        HtmlFile = open("graph.html", 'r', encoding='utf-8')
+        return HtmlFile.read()
+    except Exception as e:
+        return f"<div>Error generating graph: {e}</div>"
+
+
 # --- 4. APP STATE ---
 if "audit_data" not in st.session_state:
     st.session_state.audit_data = None
-    st.session_state.app_state = "landing" 
+    st.session_state.app_state = "landing"
 
 # --- 5. SIDEBAR ---
 with st.sidebar:
     st.markdown("### 🕸️ Smart-Spider")
-    st.caption("v3.0 | ENTERPRISE CORE")
+    st.caption("v3.1 | NETWORK EDITION")
     st.markdown("---")
     
     target_url = st.text_input("ENTER TARGET URL", "https://emblus.com")
@@ -150,29 +204,28 @@ with st.sidebar:
         with st.status("System Active: Running Protocols...", expanded=True) as status:
             st.write("🔹 Resolving DNS & Handshake...")
             time.sleep(0.3)
-            st.write("🔹 Parsing DOM Structure...")
-            # CALL CRAWLER
+            st.write(f"🔹 Crawling {target_url}...")
             st.session_state.audit_data = crawl_url(target_url) 
+            st.write("🔹 Generating Knowledge Graph...")
+            time.sleep(0.2)
             st.write("🔹 AI Vision Processing...")
             time.sleep(0.3)
             status.update(label="Audit Complete", state="complete", expanded=False)
 
-# --- 6. MAIN CONTENT AREA ---
+# --- 6. MAIN CONTENT ---
 
-# VIEW 1: LANDING PAGE
+# LANDING PAGE
 if st.session_state.app_state == "landing":
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown('<h1 class="hero-text">SEO AUDITS REIMAGINED</h1>', unsafe_allow_html=True)
     st.markdown('<p class="hero-sub">AI-Powered Technical Analysis for the Modern Web</p>', unsafe_allow_html=True)
     
-    # Feature Grid
     col1, col2, col3 = st.columns(3)
     features = [
         ("⚡ Lightning Fast", "Async Python Engine"),
-        ("👁️ AI Vision", "Auto-Captioning Neural Net"),
-        ("🛡️ Security Check", "SSL & Header Analysis")
+        ("🕸️ Knowledge Graph", "Site Structure Topology"),
+        ("👁️ AI Vision", "Auto-Captioning Neural Net")
     ]
-    
     for col, (title, desc) in zip([col1, col2, col3], features):
         with col:
             st.markdown(f"""
@@ -182,18 +235,18 @@ if st.session_state.app_state == "landing":
             </div>
             """, unsafe_allow_html=True)
 
-# VIEW 2: RESULTS DASHBOARD
+# RESULTS DASHBOARD
 elif st.session_state.app_state == "results" and st.session_state.audit_data:
     data = st.session_state.audit_data
     
     if data.get("error"):
         st.error(f"Connection Failed: {data['error']}")
     else:
-        # --- HEADER ---
+        # HEADER
         st.markdown(f"### 📡 Audit Report: `{target_url}`")
         st.markdown("---")
 
-        # --- SCORING ALGORITHM ---
+        # SCORING
         score = 100
         if data['load_time'] > 1.0: score -= 10
         if data['load_time'] > 2.0: score -= 10
@@ -202,100 +255,69 @@ elif st.session_state.app_state == "results" and st.session_state.audit_data:
         if data['status_code'] != 200: score -= 30
         final_score = max(0, score)
 
-        # --- MAIN DASHBOARD GRID ---
+        # DASHBOARD GRID
         col_score, col_stats = st.columns([1.5, 3], gap="large")
 
-        # LEFT: THE SCORE RING
         with col_score:
             st.markdown('<div class="glass-metric" style="height: 100%;">', unsafe_allow_html=True)
             st.markdown('<p class="metric-label">OVERALL HEALTH</p>', unsafe_allow_html=True)
             st.plotly_chart(create_donut_chart(final_score), use_container_width=True, config={'displayModeBar': False})
             
-            # Status Badge
             status_color = "#10B981" if final_score > 80 else "#F59E0B"
             status_text = "OPTIMIZED" if final_score > 80 else "NEEDS WORK"
             st.markdown(f"""
             <div style="background:{status_color}20; border:1px solid {status_color}; color:{status_color}; 
-            padding:5px 15px; border-radius:20px; font-size:0.8rem; font-weight:700; margin-top:10px;">
+            padding:5px 15px; border-radius:20px; font-size:0.8rem; font-weight:700; margin-top:-20px;">
             {status_text}
             </div>
             """, unsafe_allow_html=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
-        # RIGHT: DETAILED METRICS GRID
         with col_stats:
-            # Row 1
             r1c1, r1c2, r1c3 = st.columns(3)
             with r1c1:
-                st.markdown(f"""
-                <div class="glass-metric">
-                    <span class="metric-val">{data['load_time']}s</span>
-                    <span class="metric-label">⚡ Load Speed</span>
-                </div>
-                """, unsafe_allow_html=True)
+                st.markdown(f"<div class='glass-metric'><span class='metric-val'>{data['load_time']}s</span><span class='metric-label'>⚡ Load Speed</span></div>", unsafe_allow_html=True)
             with r1c2:
-                st.markdown(f"""
-                <div class="glass-metric">
-                    <span class="metric-val">{len(data['images'])}</span>
-                    <span class="metric-label">🖼️ Assets</span>
-                </div>
-                """, unsafe_allow_html=True)
+                st.markdown(f"<div class='glass-metric'><span class='metric-val'>{len(data['images'])}</span><span class='metric-label'>🖼️ Assets</span></div>", unsafe_allow_html=True)
             with r1c3:
-                st.markdown(f"""
-                <div class="glass-metric">
-                    <span class="metric-val">{data['internal_links']}</span>
-                    <span class="metric-label">🔗 Links</span>
-                </div>
-                """, unsafe_allow_html=True)
+                st.markdown(f"<div class='glass-metric'><span class='metric-val'>{data['internal_links_count']}</span><span class='metric-label'>🔗 Total Links</span></div>", unsafe_allow_html=True)
             
-            # Row 2 (New Parameters)
-            st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True) # Spacer
+            st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
             r2c1, r2c2, r2c3 = st.columns(3)
-            
-            # SSL Logic
             is_ssl = target_url.startswith("https")
             ssl_icon = "🔒 Secure" if is_ssl else "🔓 Unsafe"
+            meta_status = "✅ Valid" if data['title'] != "Missing" else "❌ Missing"
             
-            with r2c1:
-                 st.markdown(f"""
-                <div class="glass-metric">
-                    <span class="metric-val" style="font-size:1.4rem;">{ssl_icon}</span>
-                    <span class="metric-label">Protocol</span>
-                </div>
-                """, unsafe_allow_html=True)
-            with r2c2:
-                # SEO Meta Check logic
-                meta_status = "✅ Valid" if data['title'] != "Missing" else "❌ Missing"
-                st.markdown(f"""
-                <div class="glass-metric">
-                    <span class="metric-val" style="font-size:1.4rem;">{meta_status}</span>
-                    <span class="metric-label">Meta Tags</span>
-                </div>
-                """, unsafe_allow_html=True)
-            with r2c3:
-                st.markdown(f"""
-                <div class="glass-metric">
-                    <span class="metric-val">{data['status_code']}</span>
-                    <span class="metric-label">Server Code</span>
-                </div>
-                """, unsafe_allow_html=True)
+            with r2c1: st.markdown(f"<div class='glass-metric'><span class='metric-val' style='font-size:1.4rem;'>{ssl_icon}</span><span class='metric-label'>Protocol</span></div>", unsafe_allow_html=True)
+            with r2c2: st.markdown(f"<div class='glass-metric'><span class='metric-val' style='font-size:1.4rem;'>{meta_status}</span><span class='metric-label'>Meta Tags</span></div>", unsafe_allow_html=True)
+            with r2c3: st.markdown(f"<div class='glass-metric'><span class='metric-val'>{data['status_code']}</span><span class='metric-label'>Server Code</span></div>", unsafe_allow_html=True)
 
-        # --- TABS SECTION ---
+        # TABS SECTION
         st.markdown("###")
-        t1, t2 = st.tabs(["📄 Content Architecture", "👁️ Vision Analysis"])
+        t1, t2, t3 = st.tabs(["📄 Content Architecture", "🕸️ Knowledge Graph", "👁️ Vision Analysis"])
         
         with t1:
             st.info(f"**Title Tag:** {data['title']}")
             st.code(f"Meta Description: {data['meta_desc']}", language="html")
-            
+
+        # --- NEW TAB: KNOWLEDGE GRAPH ---
         with t2:
+            st.markdown("#### 🛸 Site Topology Visualizer")
+            st.caption("Interactive Force-Directed Graph of Internal Links")
+            
+            if data['found_links']:
+                # Generate and Render Graph
+                graph_html = generate_knowledge_graph(target_url, data['found_links'])
+                components.html(graph_html, height=460, scrolling=True)
+            else:
+                st.warning("No internal links found to visualize.")
+
+        with t3:
             st.markdown("#### Image Alt-Text Auditor")
             df_img = pd.DataFrame(data["images"])
-            
             if not df_img.empty:
                 missing = df_img[df_img['alt'] == '']
                 st.metric("Images Missing Alt-Text", len(missing), delta_color="inverse")
-                
                 if not missing.empty:
                     col_sel, col_prev = st.columns([1, 1])
                     with col_sel:
