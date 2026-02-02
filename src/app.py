@@ -190,7 +190,7 @@ with st.sidebar:
     st.markdown("---")
     
     # --- HISTORY MODULE ---
-    st.markdown("##### 🕒 Recent Audits")
+    st.markdown("##### ◴   Recent Audits")
     history = db.get_recent_scans()
     if history:
         options = {f"{row[3][:10]} - {row[1]} ({row[2]}%)": row[0] for row in history}
@@ -198,7 +198,7 @@ with st.sidebar:
         
         if selected_option != "Select...":
             scan_id = options[selected_option]
-            if st.button("📂 Load Report"):
+            if st.button("🗀 Load Report"):
                 loaded_data = db.get_scan_by_id(scan_id)
                 if loaded_data:
                     st.session_state.audit_data = loaded_data
@@ -209,7 +209,7 @@ with st.sidebar:
     
     st.markdown("---")
     
-    target_url = st.text_input("ENTER TARGET URL", "")
+    target_url = st.text_input("☍ ‎‎‎  ENTER TARGET URL", "")
     
     c1, c2 = st.columns(2)
     with c1: st.toggle("Deep Scan", value=True)
@@ -221,9 +221,9 @@ with st.sidebar:
     if run_btn and target_url:
         st.session_state.app_state = "results"
         with st.status("System Active: Running Protocols...", expanded=True) as status:
-            st.write("🔹 Resolving DNS & Handshake...")
+            st.write("» Resolving DNS & Handshake...")
             time.sleep(0.3)
-            st.write(f"🔹 Crawling {target_url}...")
+            st.write(f"» Crawling {target_url}...")
             
             # --- CRAWL EXECUTION ---
             data = crawl_url(target_url) 
@@ -231,12 +231,12 @@ with st.sidebar:
             
             # --- SAVE TO DB (AUTO) ---
             if not data.get("error"):
-                st.write("🔹 Saving to Knowledge Base...")
+                st.write("» Saving to Knowledge Base...")
                 final_score = calculate_score(data)
                 db.save_scan(target_url, final_score, data)
                 
-            st.write("🔹 Generating Knowledge Graph...")
-            st.write("🔹 AI Vision Processing...")
+            st.write("» Generating Knowledge Graph...")
+            st.write("» AI Vision Processing...")
             time.sleep(0.3)
             status.update(label="Audit Complete", state="complete", expanded=False)
 
@@ -250,9 +250,9 @@ if st.session_state.app_state == "landing":
     
     col1, col2, col3 = st.columns(3)
     features = [
-        ("⚡ Lightning Fast", "Async Python Engine"),
-        ("🕸️ Knowledge Graph", "Site Structure Topology"),
-        ("💾 Persistent Memory", "SQLite History Engine")
+        ("֎🇦🇮 Lightning Fast", "Async Python Engine"),
+        ("📝 Knowledge Graph", "Site Structure Topology"),
+        ("🗃️ Persistent Memory", "SQLite History Engine")
     ]
     for col, (title, desc) in zip([col1, col2, col3], features):
         with col:
@@ -271,7 +271,7 @@ elif st.session_state.app_state == "results" and st.session_state.audit_data:
         st.error(f"Connection Failed: {data['error']}")
     else:
         # HEADER
-        st.markdown(f"### 📈 Audit Report: `{target_url}`")
+        st.markdown(f"### Audit Report: `{target_url}`")
         st.markdown("---")
 
         # SCORING
@@ -319,8 +319,8 @@ elif st.session_state.app_state == "results" and st.session_state.audit_data:
             st.markdown("<div style='height: 15px;'></div>", unsafe_allow_html=True)
             r2c1, r2c2, r2c3 = st.columns(3)
             is_ssl = target_url.startswith("https")
-            ssl_icon = "🔒 Secure" if is_ssl else "🔓 Unsafe"
-            meta_status = "✅ Valid" if data['title'] != "Missing" else "❌ Missing"
+            ssl_icon = "🔒︎ Secure" if is_ssl else "ꗃ Unsafe"
+            meta_status = "✔ Valid" if data['title'] != "Missing" else "⁉️ Missing"
             
             with r2c1: st.markdown(f"<div class='glass-metric'><span class='metric-val' style='font-size:1.4rem;'>{ssl_icon}</span><span class='metric-label'>Protocol</span></div>", unsafe_allow_html=True)
             with r2c2: st.markdown(f"<div class='glass-metric'><span class='metric-val' style='font-size:1.4rem;'>{meta_status}</span><span class='metric-label'>Meta Tags</span></div>", unsafe_allow_html=True)
@@ -328,7 +328,7 @@ elif st.session_state.app_state == "results" and st.session_state.audit_data:
 
         # TABS SECTION
         st.markdown("###")
-        t1, t2, t3 = st.tabs(["📄 Content Architecture", "🕸️ Knowledge Graph", "👁️ Vision Analysis"])
+        t1, t2, t3 = st.tabs(["Content Architecture", "Knowledge Graph", "Vision Analysis"])
         
         with t1:
             st.info(f"**Title Tag:** {data['title']}")
@@ -336,7 +336,7 @@ elif st.session_state.app_state == "results" and st.session_state.audit_data:
 
         # --- TAB 2: KNOWLEDGE GRAPH ---
         with t2:
-            st.markdown("#### 🛸 Site Topology Visualizer")
+            st.markdown("#### ⛶ Site Topology Visualizer")
             st.caption("Interactive Force-Directed Graph of Internal Links")
             
             if data['found_links']:
@@ -356,7 +356,7 @@ elif st.session_state.app_state == "results" and st.session_state.audit_data:
                     col_sel, col_prev = st.columns([1, 1])
                     with col_sel:
                         img_opt = st.selectbox("Select Image to Fix:", missing['src'].tolist())
-                        if st.button("✨ Generate AI Caption"):
+                        if st.button("⟡ Generate AI Caption"):
                             with st.spinner("AI Processing..."):
                                 cap = generate_ai_caption(img_opt)
                                 st.success("Generated:")
