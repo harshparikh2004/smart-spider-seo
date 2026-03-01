@@ -5,7 +5,7 @@ import datetime
 DB_NAME = "spider_history.db"
 
 def init_db():
-    """Creates the table if it doesn't exist."""
+    # Creates the table if it doesn't 
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     # We store the entire audit result as a big JSON text blob
@@ -22,19 +22,19 @@ def init_db():
     conn.close()
 
 def save_scan(url, score, data_dict):
-    """Saves a new scan to the history."""
+    # Saves a new scan to the history
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     # Convert the dictionary to a string so we can save it
     data_str = json.dumps(data_dict)
     
     c.execute("INSERT INTO scans (url, score, full_data) VALUES (?, ?, ?)", 
-              (url, score, data_str))
+            (url, score, data_str))
     conn.commit()
     conn.close()
 
 def get_recent_scans(limit=10):
-    """Fetches the last X scans for the sidebar."""
+    # Fetches the last X scans for the sidebar.
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     c.execute("SELECT id, url, score, timestamp FROM scans ORDER BY id DESC LIMIT ?", (limit,))
@@ -43,7 +43,7 @@ def get_recent_scans(limit=10):
     return rows
 
 def get_scan_by_id(scan_id):
-    """Loads a specific old report."""
+    #Loads a specific old report
     conn = sqlite3.connect(DB_NAME)
     c = conn.cursor()
     c.execute("SELECT full_data FROM scans WHERE id=?", (scan_id,))

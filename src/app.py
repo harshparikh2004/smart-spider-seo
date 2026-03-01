@@ -157,9 +157,9 @@ def generate_knowledge_graph(root_url, links):
     
     net.set_options("""
     var options = {
-      "nodes": { "font": { "size": 14, "face": "Plus Jakarta Sans" }, "borderWidth": 2 },
-      "edges": { "color": { "inherit": true }, "smooth": false },
-      "physics": { "forceAtlas2Based": { "gravitationalConstant": -50, "centralGravity": 0.01, "springLength": 100, "springConstant": 0.08 }, "maxVelocity": 50, "solver": "forceAtlas2Based", "timestep": 0.35, "stabilization": { "enabled": true } }
+    "nodes": { "font": { "size": 14, "face": "Plus Jakarta Sans" }, "borderWidth": 2 },
+    "edges": { "color": { "inherit": true }, "smooth": false },
+    "physics": { "forceAtlas2Based": { "gravitationalConstant": -50, "centralGravity": 0.01, "springLength": 100, "springConstant": 0.08 }, "maxVelocity": 50, "solver": "forceAtlas2Based", "timestep": 0.35, "stabilization": { "enabled": true } }
     }
     """)
     
@@ -209,7 +209,7 @@ with st.sidebar:
     
     st.markdown("---")
     
-    target_url = st.text_input("☍ ‎‎‎  ENTER TARGET URL", "")
+    target_url = st.text_input("☍ ENTER TARGET URL", "")
     
     c1, c2 = st.columns(2)
     with c1: st.toggle("Deep Scan", value=True)

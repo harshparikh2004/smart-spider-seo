@@ -4,9 +4,9 @@ from urllib.parse import urljoin, urlparse
 import time
 
 def crawl_url(url):
-    """
-    Crawls the URL and extracts technical SEO data + Internal Links for the Graph.
-    """
+    
+    # Crawls the URL and extracts technical SEO data + Internal Links for the Graph.
+    
     start_time = time.time()
     
     try:

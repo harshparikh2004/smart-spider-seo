@@ -48,7 +48,7 @@ def generate_ai_caption(image_url):
         image = Image.open(BytesIO(img_response.content))
         
         # Call the API using the new method
-        # We use 'gemini-1.5-flash' as it is the standard fast model.
+        # We use 'gemini-2.5-flash' as it is the standard fast model.
         # If this fails, try 'gemini-2.0-flash-exp' if available in your region.
         response = client.models.generate_content(
             model='gemini-2.5-flash',
