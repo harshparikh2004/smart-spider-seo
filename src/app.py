@@ -175,6 +175,7 @@ def generate_knowledge_graph(root_url, links):
 if "audit_data" not in st.session_state:
     st.session_state.audit_data = None
     st.session_state.app_state = "landing"
+    st.session_state.action_plan = None
 
 # --- 5. SIDEBAR ---
 with st.sidebar:
@@ -220,6 +221,7 @@ with st.sidebar:
     
     if run_btn and target_url:
         st.session_state.app_state = "results"
+        st.session_state.action_plan = None
         with st.status("System Active: Running Protocols...", expanded=True) as status:
             st.write("» Resolving DNS & Handshake...")
             time.sleep(0.3)
@@ -298,7 +300,7 @@ elif st.session_state.app_state == "results" and st.session_state.audit_data:
             st.markdown("###") # Spacer
             if st.button("Generate PDF Report"):
                 with st.spinner("Compiling PDF..."):
-                    pdf_bytes = report_gen.create_pdf(target_url, data, final_score)
+                    pdf_bytes = report_gen.create_pdf(target_url, data, final_score, st.session_state.action_plan)
                     st.download_button(
                         label="⬇️ Download Now",
                         data=pdf_bytes,
@@ -306,7 +308,7 @@ elif st.session_state.app_state == "results" and st.session_state.audit_data:
                         mime="application/pdf",
                         use_container_width=True
                     )
-
+            
         with col_stats:
             r1c1, r1c2, r1c3 = st.columns(3)
             with r1c1:
@@ -325,6 +327,33 @@ elif st.session_state.app_state == "results" and st.session_state.audit_data:
             with r2c1: st.markdown(f"<div class='glass-metric'><span class='metric-val' style='font-size:1.4rem;'>{ssl_icon}</span><span class='metric-label'>Protocol</span></div>", unsafe_allow_html=True)
             with r2c2: st.markdown(f"<div class='glass-metric'><span class='metric-val' style='font-size:1.4rem;'>{meta_status}</span><span class='metric-label'>Meta Tags</span></div>", unsafe_allow_html=True)
             with r2c3: st.markdown(f"<div class='glass-metric'><span class='metric-val'>{data['status_code']}</span><span class='metric-label'>Server Code</span></div>", unsafe_allow_html=True)
+            
+        # --- NEW: SECURITY POSTURE MODULE ---
+        st.markdown("###")
+        st.markdown("#### 🔒 Trust & Security Posture")
+        st.caption("Analyzing server response headers for critical cybersecurity configurations that impact search engine trust.")
+        
+        sec = data.get('security_headers', {})
+        s1, s2, s3, s4 = st.columns(4)
+        
+        def render_sec_card(col, title, is_secure, tooltip):
+            color = "#10B981" if is_secure else "#EF4444"
+            icon = "✔️ Active" if is_secure else "⚠️ Missing"
+            border = f"1px solid {color}50"
+            bg = f"{color}10"
+            
+            with col:
+                st.markdown(f"""
+                <div style="background:{bg}; border:{border}; border-radius:8px; padding:15px; height:100px; display:flex; flex-direction:column; justify-content:center;" title="{tooltip}">
+                    <span style="color:#94A3B8; font-size:0.8rem; font-weight:700; text-transform:uppercase;">{title}</span>
+                    <span style="color:{color}; font-size:1.2rem; font-weight:800; margin-top:5px;">{icon}</span>
+                </div>
+                """, unsafe_allow_html=True)
+
+        render_sec_card(s1, "HSTS", sec.get('hsts', False), "Strict-Transport-Security: Forces secure HTTPS connections.")
+        render_sec_card(s2, "X-Frame-Options", sec.get('x_frame', False), "Prevents Clickjacking attacks.")
+        render_sec_card(s3, "X-Content-Type", sec.get('x_content_type', False), "Prevents MIME-sniffing vulnerabilities.")
+        render_sec_card(s4, "CSP", sec.get('csp', False), "Content-Security-Policy: Mitigates Cross-Site Scripting (XSS).")
 
         # TABS SECTION
         st.markdown("###")
@@ -368,17 +397,20 @@ elif st.session_state.app_state == "results" and st.session_state.audit_data:
         
         # --- TAB 4: AI ACTION PLAN ---
         with t4:
-            st.markdown("#### 🚀 Strategic Upgrade Recommendations")
+            st.markdown("#### Strategic Upgrade Recommendations")
             st.caption("AI-generated content and structural improvements based on live page data.")
             
-            # We use a button so the AI only runs when the user explicitly asks for it
-            # This makes the initial scan much faster!
-            if st.button("🧠 Generate Custom Action Plan"):
-                with st.spinner("Consulting AI Engine..."):
-                    action_plan = generate_seo_action_plan(
-                        data['title'], 
-                        data['meta_desc'], 
-                        data.get('page_text', '')
-                    )
-                    st.success("Analysis Complete")
-                    st.markdown(action_plan)
+            # Show existing plan if already generated
+            if st.session_state.action_plan:
+                st.success("Analysis Complete")
+                st.markdown(st.session_state.action_plan)
+            else:
+                if st.button("⟡ Generate Custom Action Plan"):
+                    with st.spinner("Consulting AI Engine..."):
+                        action_plan = generate_seo_action_plan(
+                            data['title'], 
+                            data['meta_desc'], 
+                            data.get('page_text', '')
+                        )
+                        st.session_state.action_plan = action_plan
+                        st.rerun()

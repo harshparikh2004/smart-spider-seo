@@ -67,6 +67,15 @@ def crawl_url(url):
         # This prevents the app from lagging and saves Gemini tokens!
         page_text = " ".join(text_elements)[:3000] 
 
+        # 5. Security Posture (DevSecOps)
+        headers_dict = {k.lower(): v for k, v in response.headers.items()}
+        security_headers = {
+            "hsts": "strict-transport-security" in headers_dict,
+            "x_frame": "x-frame-options" in headers_dict,
+            "x_content_type": "x-content-type-options" in headers_dict,
+            "csp": "content-security-policy" in headers_dict
+        }
+
         load_time = round(time.time() - start_time, 2)
         
         return {
@@ -77,7 +86,8 @@ def crawl_url(url):
             "images": images,
             "internal_links_count": len(internal_links),
             "found_links": list(internal_links)[:30],
-            "page_text": page_text # <--- NEW DATA POINT
+            "page_text": page_text,
+            "security_headers": security_headers # <--- NEW DATA POINT
         }
 
     except Exception as e:
