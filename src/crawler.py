@@ -52,6 +52,20 @@ def crawl_url(url):
                 clean_link = full_link.rstrip('/')
                 if clean_link != url.rstrip('/'): # Don't link to self
                     internal_links.add(clean_link)
+        
+        # 4. Extract Page Content for AI Analysis
+        text_elements = []
+        
+        # Grab all headings and paragraphs
+        for tag in soup.find_all(['h1', 'h2', 'h3', 'p']):
+            text = tag.get_text(strip=True)
+            # Filter out tiny, useless UI fragments like "Menu" or "Login"
+            if len(text) > 20: 
+                text_elements.append(text)
+        
+        # Join into a single string and limit to the first 3000 characters
+        # This prevents the app from lagging and saves Gemini tokens!
+        page_text = " ".join(text_elements)[:3000] 
 
         load_time = round(time.time() - start_time, 2)
         
@@ -62,7 +76,8 @@ def crawl_url(url):
             "meta_desc": meta_desc,
             "images": images,
             "internal_links_count": len(internal_links),
-            "found_links": list(internal_links)[:30] # Limit to 30 for the graph (prevents lag)
+            "found_links": list(internal_links)[:30],
+            "page_text": page_text # <--- NEW DATA POINT
         }
 
     except Exception as e:

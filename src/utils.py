@@ -69,3 +69,44 @@ def generate_ai_caption(image_url):
         print(f"🔴 AI FAILURE: {e}")
         # Return a backup so the crawler keeps moving
         return f"✨ {random.choice(BACKUP_CAPTIONS)}"
+    
+def generate_seo_action_plan(title, meta, text_content):
+    """
+    Feeds page content to Gemini to generate actionable SEO upgrades.
+    """
+    if not GOOGLE_KEY:
+        return "⚠️ Error: API Key missing. Cannot generate action plan."
+
+    # If the page is completely empty
+    if not text_content or len(text_content) < 50:
+        return "⚠️ Insufficient text content on this page to perform a meaningful AI analysis. Consider adding more descriptive paragraphs."
+
+    try:
+        client = genai.Client(api_key=GOOGLE_KEY)
+        
+        # The Prompt Engineering is crucial here for professional results
+        prompt = f"""
+        Act as an Expert SEO Consultant. Analyze the following webpage data:
+        
+        Title Tag: {title}
+        Meta Description: {meta}
+        Page Content Snippet: {text_content}
+        
+        Based on this data, provide 3 to 4 highly specific, actionable upgrades to improve its Google search ranking. 
+        Focus on content strategy, keyword targeting, and heading structure.
+        Format your response as short, punchy bullet points. Do not use generic advice like "make sure it loads fast".
+        """
+        
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt
+        )
+        
+        if response.text:
+            return response.text.strip()
+        else:
+            raise Exception("Empty response from AI")
+
+    except Exception as e:
+        print(f"🔴 AI PLAN FAILURE: {e}")
+        return "⚠️ The AI Consultant is currently analyzing too much data. Please try again in a moment."

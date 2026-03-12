@@ -9,7 +9,7 @@ import datetime
 
 # --- IMPORT MODULES ---
 from crawler import crawl_url
-from utils import generate_ai_caption
+from utils import generate_ai_caption, generate_seo_action_plan
 import database as db 
 import report_gen # <--- NEW: Import the Report Generator
 
@@ -328,7 +328,7 @@ elif st.session_state.app_state == "results" and st.session_state.audit_data:
 
         # TABS SECTION
         st.markdown("###")
-        t1, t2, t3 = st.tabs(["Content Architecture", "Knowledge Graph", "Vision Analysis"])
+        t1, t2, t3, t4 = st.tabs(["Content Architecture", "Knowledge Graph", "Vision Analysis", "AI Action Plan"])
         
         with t1:
             st.info(f"**Title Tag:** {data['title']}")
@@ -365,3 +365,20 @@ elif st.session_state.app_state == "results" and st.session_state.audit_data:
                         if img_opt: st.image(img_opt, width=300)
             else:
                 st.success("No images found.")
+        
+        # --- TAB 4: AI ACTION PLAN ---
+        with t4:
+            st.markdown("#### 🚀 Strategic Upgrade Recommendations")
+            st.caption("AI-generated content and structural improvements based on live page data.")
+            
+            # We use a button so the AI only runs when the user explicitly asks for it
+            # This makes the initial scan much faster!
+            if st.button("🧠 Generate Custom Action Plan"):
+                with st.spinner("Consulting AI Engine..."):
+                    action_plan = generate_seo_action_plan(
+                        data['title'], 
+                        data['meta_desc'], 
+                        data.get('page_text', '')
+                    )
+                    st.success("Analysis Complete")
+                    st.markdown(action_plan)
